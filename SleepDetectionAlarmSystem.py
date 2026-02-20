@@ -1,477 +1,311 @@
-import cv2
-import mediapipe as mp
-import numpy as np
-import math
-import time
-import pygame
-import threading
-import json
-import os
-from collections import deque
-from scipy.spatial import distance as dist
+import React, { useState, useEffect, useRef } from 'react';
 
+// --- DATA ---
+const PROFILE = {
+  name: "K. Hari Vamsi",
+  title: "Computer Science & Engineering Student",
+  email: "harivamsikandregula@gmail.com",
+  phone: "+91 9989528669",
+  linkedin: "linkedin.com/in/k-hari-vamsi",
+  github: "github.com/harivamsikandregula-lab",
+  about: "Passionate Computer Science & Engineering undergrad at Vishnu Institute of Technology. I specialize in software development, machine learning, and algorithm design.",
+};
 
-class MLEnhancedSleepDetectionSystem:
-    def __init__(self):
-        # Initialize MediaPipe Face Mesh
-        self.mp_face_mesh = mp.solutions.face_mesh
-        self.face_mesh = self.mp_face_mesh.FaceMesh(
-            max_num_faces=1,
-            refine_landmarks=True,
-            min_detection_confidence=0.7,
-            min_tracking_confidence=0.7
-        )
+// Structured tokens for multi-color typing animation
+const CONTENT_DATA = {
+  about: [
+    { text: "{\n", color: "text-white" },
+    { text: '  "identity"', color: "text-cyan-400" }, { text: ": ", color: "text-white" }, { text: `"${PROFILE.name}"`, color: "text-amber-400" }, { text: ",\n", color: "text-white" },
+    { text: '  "role"', color: "text-cyan-400" }, { text: ": ", color: "text-white" }, { text: `"${PROFILE.title}"`, color: "text-amber-400" }, { text: ",\n", color: "text-white" },
+    { text: '  "status"', color: "text-cyan-400" }, { text: ": ", color: "text-white" }, { text: '"Active/Ready"', color: "text-emerald-400 font-bold" }, { text: ",\n", color: "text-white" },
+    { text: '  "bio"', color: "text-cyan-400" }, { text: ": ", color: "text-white" }, { text: `"${PROFILE.about}"`, color: "text-amber-400" }, { text: ",\n", color: "text-white" },
+    { text: '  "contact"', color: "text-cyan-400" }, { text: ": {\n", color: "text-white" },
+    { text: '    "email"', color: "text-indigo-400" }, { text: ": ", color: "text-white" }, { text: `"${PROFILE.email}"`, color: "text-amber-400" }, { text: ",\n", color: "text-white" },
+    { text: '    "github"', color: "text-indigo-400" }, { text: ": ", color: "text-white" }, { text: `"${PROFILE.github}"`, color: "text-amber-400" }, { text: ",\n", color: "text-white" },
+    { text: '    "linkedin"', color: "text-indigo-400" }, { text: ": ", color: "text-white" }, { text: `"${PROFILE.linkedin}"`, color: "text-amber-400" }, { text: "\n", color: "text-white" },
+    { text: "  }\n", color: "text-white" },
+    { text: "}", color: "text-white" },
+  ],
+  skills: [
+    { text: "root@hvamsi-os:~/skills$ tree\n", color: "text-slate-500" },
+    { text: ".\n", color: "text-white" },
+    { text: "├── ", color: "text-slate-600" }, { text: "Languages\n", color: "text-cyan-400 font-bold" },
+    { text: "│   ├── ", color: "text-slate-600" }, { text: "Java (Core)\n", color: "text-white" },
+    { text: "│   ├── ", color: "text-slate-600" }, { text: "Python\n", color: "text-white" },
+    { text: "│   ├── ", color: "text-slate-600" }, { text: "C\n", color: "text-white" },
+    { text: "│   └── ", color: "text-slate-600" }, { text: "SQL (MySQL)\n", color: "text-white" },
+    { text: "├── ", color: "text-slate-600" }, { text: "Core_CS\n", color: "text-purple-400 font-bold" },
+    { text: "│   ├── ", color: "text-slate-600" }, { text: "Data Structures & Algorithms\n", color: "text-white" },
+    { text: "│   ├── ", color: "text-slate-600" }, { text: "OOP\n", color: "text-white" },
+    { text: "│   ├── ", color: "text-slate-600" }, { text: "DBMS\n", color: "text-white" },
+    { text: "│   └── ", color: "text-slate-600" }, { text: "Linux\n", color: "text-white" },
+    { text: "├── ", color: "text-slate-600" }, { text: "Tools\n", color: "text-amber-400 font-bold" },
+    { text: "│   ├── ", color: "text-slate-600" }, { text: "JDBC\n", color: "text-white" },
+    { text: "│   ├── ", color: "text-slate-600" }, { text: "Git/GitHub\n", color: "text-white" },
+    { text: "│   └── ", color: "text-slate-600" }, { text: "VS Code\n", color: "text-white" },
+    { text: "└── ", color: "text-slate-600" }, { text: "Automation\n", color: "text-emerald-400 font-bold" },
+    { text: "    ├── ", color: "text-slate-600" }, { text: "Zapier\n", color: "text-white" },
+    { text: "    └── ", color: "text-slate-600" }, { text: "n8n", color: "text-white" },
+  ],
+  projects: [
+    { text: "[OCT 2025] ", color: "text-purple-500" }, { text: "DROWSINESS ALERT SYSTEM\n", color: "text-white font-bold" },
+    { text: "> Designed EAR system for real-time sleep detection.\n", color: "text-slate-400" },
+    { text: "> Tech: ", color: "text-emerald-500" }, { text: "Python, OpenCV, MediaPipe, ML\n\n", color: "text-cyan-300" },
+
+    { text: "[SEP 2025] ", color: "text-purple-500" }, { text: "CLASS TRACK PRO\n", color: "text-white font-bold" },
+    { text: "> Responsive web app for attendance tracking.\n", color: "text-slate-400" },
+    { text: "> Tech: ", color: "text-emerald-500" }, { text: "HTML, CSS, JavaScript, Netlify\n\n", color: "text-cyan-300" },
+
+    { text: "[MAR 2025] ", color: "text-purple-500" }, { text: "HOTEL MANAGEMENT SYSTEM\n", color: "text-white font-bold" },
+    { text: "> Scalable backend with secure JDBC connectivity.\n", color: "text-slate-400" },
+    { text: "> Tech: ", color: "text-emerald-500" }, { text: "Java, JDBC, MySQL", color: "text-cyan-300" },
+  ],
+  experience: [
+    { text: "LOG_EVENT: 2025-01 ", color: "text-slate-500" }, { text: "SIH 2025 - PARTICIPANT\n", color: "text-white font-bold" },
+    { text: "INFO: Built quantum-inspired secure email prototype (QMail).\n\n", color: "text-emerald-400" },
+    
+    { text: "LOG_EVENT: 2024-06 ", color: "text-slate-500" }, { text: "FAILATHON 2024 - MENTOR\n", color: "text-white font-bold" },
+    { text: "INFO: Coached 5+ teams on Git workflows and DSA.\n\n", color: "text-amber-400" },
+    
+    { text: "LOG_EVENT: 2023-11 ", color: "text-slate-500" }, { text: "FAILATHON 2023 - PARTICIPANT\n", color: "text-white font-bold" },
+    { text: "INFO: Built logic-based prototype under 24-hr deadline.", color: "text-emerald-400" },
+  ],
+  education: [
+    { text: "# ACADEMIC_RECORD\n", color: "text-white font-bold text-lg" },
+    { text: "1. VISHNU INSTITUTE OF TECHNOLOGY\n", color: "text-cyan-400 font-bold" },
+    { text: "   B.Tech CSE [2023-2027] | ", color: "text-slate-400" }, { text: "GPA: 9.0/10\n", color: "text-emerald-400 font-bold" },
+    { text: "2. SRI CHAITANYA COLLEGE\n", color: "text-cyan-400 font-bold" },
+    { text: "   Intermediate [2021-2023] | ", color: "text-slate-400" }, { text: "Score: 96.3%\n\n", color: "text-emerald-400 font-bold" },
+    
+    { text: "# CERTIFICATIONS\n", color: "text-white font-bold text-lg" },
+    { text: "- ", color: "text-white" }, { text: "Privacy & Security in Online Social Media\n", color: "text-amber-400" },
+    { text: "- ", color: "text-white" }, { text: "Programming in Java (IIT Kharagpur)\n", color: "text-amber-400" },
+    { text: "- ", color: "text-white" }, { text: "StemExpo Participation (Aug 2025)", color: "text-amber-400" },
+  ]
+};
+
+// --- COMPONENTS ---
+
+const MultiColorTypewriter = ({ tokens, delay = 5, onComplete }) => {
+  const [displayedTokens, setDisplayedTokens] = useState([]);
+  const [currentTokenIdx, setCurrentTokenIdx] = useState(0);
+  const [currentCharIdx, setCurrentCharIdx] = useState(0);
+
+  useEffect(() => {
+    // Reset state when tokens change
+    setDisplayedTokens([]);
+    setCurrentTokenIdx(0);
+    setCurrentCharIdx(0);
+  }, [tokens]);
+
+  useEffect(() => {
+    if (currentTokenIdx >= tokens.length) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    const currentToken = tokens[currentTokenIdx];
+    const typingInterval = setInterval(() => {
+      if (currentCharIdx < currentToken.text.length) {
+        // We update the list of displayed tokens
+        setDisplayedTokens(prev => {
+          const newTokens = [...prev];
+          if (!newTokens[currentTokenIdx]) {
+            newTokens[currentTokenIdx] = { ...currentToken, text: "" };
+          }
+          newTokens[currentTokenIdx].text = currentToken.text.slice(0, currentCharIdx + 1);
+          return newTokens;
+        });
+        setCurrentCharIdx(prev => prev + 1);
+      } else {
+        clearInterval(typingInterval);
+        setCurrentTokenIdx(prev => prev + 1);
+        setCurrentCharIdx(0);
+      }
+    }, delay);
+
+    return () => clearInterval(typingInterval);
+  }, [currentTokenIdx, currentCharIdx, tokens, delay, onComplete]);
+
+  return (
+    <pre className="whitespace-pre-wrap font-mono break-words leading-relaxed tracking-tight text-sm md:text-base">
+      {displayedTokens.map((token, i) => (
+        <span key={i} className={token.color}>{token.text}</span>
+      ))}
+      <span className="inline-block w-2.5 h-5 bg-emerald-500 ml-1 animate-pulse align-middle"></span>
+    </pre>
+  );
+};
+
+const TerminalPrompt = ({ path = "~" }) => (
+  <span className="font-bold">
+    <span className="text-emerald-500">guest@hvamsi-os</span>
+    <span className="text-white">:</span>
+    <span className="text-blue-400">{path}</span>
+    <span className="text-white">$ </span>
+  </span>
+);
+
+export default function App() {
+  const [booting, setBooting] = useState(true);
+  const [activeTab, setActiveTab] = useState('about');
+  const [commandTyped, setCommandTyped] = useState("");
+  const [isCommandDone, setIsCommandDone] = useState(false);
+  const [renderKey, setRenderKey] = useState(0);
+
+  const tabs = [
+    { id: 'about', cmd: './whoami.sh', path: '~' },
+    { id: 'skills', cmd: 'ls -R ./skills', path: '~/skills' },
+    { id: 'projects', cmd: './run_projects.bin', path: '~/projects' },
+    { id: 'experience', cmd: 'cat /var/log/events.log', path: '~' },
+    { id: 'education', cmd: 'cat education.md', path: '~' }
+  ];
+
+  useEffect(() => {
+    const timer = setTimeout(() => setBooting(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Handle Initial & Tab Change Command Typing
+  useEffect(() => {
+    if (booting) return;
+    
+    setIsCommandDone(false);
+    setCommandTyped("");
+    const targetCmd = tabs.find(t => t.id === activeTab).cmd;
+    
+    let i = 0;
+    const interval = setInterval(() => {
+      setCommandTyped(targetCmd.slice(0, i + 1));
+      i++;
+      if (i >= targetCmd.length) {
+        clearInterval(interval);
+        setTimeout(() => {
+            setIsCommandDone(true);
+            setRenderKey(prev => prev + 1); 
+        }, 150);
+      }
+    }, 35);
+
+    return () => clearInterval(interval);
+  }, [activeTab, booting]);
+
+  if (booting) {
+    return (
+      <div className="min-h-screen bg-black text-emerald-500 font-mono p-10 flex flex-col justify-end">
+        <style dangerouslySetInnerHTML={{__html: `@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;700&display=swap'); body { font-family: 'Fira Code', monospace; }`}} />
+        <div className="space-y-1 animate-pulse text-sm md:text-base">
+          <p className="text-emerald-700">[    0.000000] Initializing HVAMSI-OS kernel...</p>
+          <p className="text-emerald-600">[    0.452123] Security Check: PASSED</p>
+          <p className="text-emerald-500">[    0.892110] Loading System Modules... OK</p>
+          <p className="text-emerald-400">[    1.200000] Opening Terminal Interface v2.5.0</p>
+        </div>
+      </div>
+    );
+  }
+
+  const currentTabInfo = tabs.find(t => t.id === activeTab);
+
+  return (
+    <div className="min-h-screen bg-[#050505] text-slate-300 font-mono flex flex-col relative overflow-hidden">
+      
+      {/* Visual FX: CRT & Scanlines */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;700&display=swap');
         
-        # Initialize pygame mixer for alarm sounds
-        pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
-        
-        # Camera parameters
-        self.cam_width = 640
-        self.cam_height = 480
-        
-        # Eye landmarks to compute EAR
-        self.LEFT_EYE_LANDMARKS = [362, 385, 387, 263, 373, 380]
-        self.RIGHT_EYE_LANDMARKS = [33, 160, 158, 133, 153, 144]
-        
-        # Sleep detection parameters
-        self.EAR_THRESHOLD = 0.20
-        self.default_alarm_threshold = 5.0  # seconds
-        self.adaptive_threshold = self.default_alarm_threshold
-        self.min_threshold = 2.0
-        self.max_threshold = 10.0
-        
-        # Learning parameters
-        self.learning_rate = 0.1
-        self.confidence_score = 0.5
-        self.user_profile = {
-            'normal_blink_duration': [],
-            'normal_blink_frequency': [],
-            'false_alarms': 0,
-            'successful_alarms': 0,
-            'total_sessions': 0
+        .scanline {
+          width: 100%; height: 100px; z-index: 100;
+          background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(16, 185, 129, 0.03) 50%, rgba(0,0,0,0) 100%);
+          position: absolute; bottom: 100%; animation: scanline 10s linear infinite; pointer-events: none;
         }
-        
-        # Optimized data buffers with fixed sizes
-        self.blink_history = deque(maxlen=50)
-        self.ear_history = deque(maxlen=100)
-        
-        # Tracking stats
-        self.eyes_closed_start = None
-        self.sleep_level = 0  # 0: Alert, 1: Sleep detected
-        self.sleep_probability = 0.0
-        self.last_alarm_reason = ""
-        
-        # Thread-safe alarm state
-        self.alarm_active = False
-        self.alarm_thread = None
-        self._alarm_lock = threading.Lock()
-        
-        # Session stats
-        self.total_blinks = 0
-        self.session_start_time = time.time()
-        
-        # Load user profile if exists
-        self.load_user_profile()
+        @keyframes scanline { 0% { bottom: 100%; } 100% { bottom: -100px; } }
 
-    def calculate_ear(self, landmarks, eye_points):
-        """Calculate Eye Aspect Ratio (EAR) - Optimized version"""
-        # Direct coordinate extraction without intermediate arrays
-        coords = [(landmarks[i].x * self.cam_width, landmarks[i].y * self.cam_height) for i in eye_points]
-        
-        # Vectorized distance calculations
-        vertical_1 = dist.euclidean(coords[1], coords[5])
-        vertical_2 = dist.euclidean(coords[2], coords[4])
-        horizontal = dist.euclidean(coords[0], coords[3])
-        
-        return (vertical_1 + vertical_2) / (2.0 * horizontal) if horizontal > 0 else 0
-
-    def detect_drowsiness_onset(self):
-        """Detect early drowsiness patterns - Optimized"""
-        if len(self.ear_history) < 20:
-            return False
-
-        # Get recent EAR values efficiently
-        recent_ears = [e['ear'] for e in list(self.ear_history)[-20:]]
-        
-        # Calculate trend efficiently
-        if len(recent_ears) <= 1:
-            return False
-            
-        ear_trend = np.polyfit(range(len(recent_ears)), recent_ears, 1)[0]
-        
-        # Check blink variance only if we have data
-        current_time = time.time()
-        recent_blinks = [b for b in self.blink_history if b['timestamp'] > current_time - 30]
-        
-        if recent_blinks and self.user_profile['normal_blink_duration']:
-            blink_variance = np.var([b['duration'] for b in recent_blinks])
-            normal_variance = np.mean(self.user_profile['normal_blink_duration'])
-            return blink_variance > normal_variance * 1.5 and ear_trend < -0.001
-        
-        return False
-
-    def predict_sleep_probability(self, current_ear, eyes_closed_duration):
-        """Predict sleep probability - Optimized calculation"""
-        indicators = []
-        
-        # Factor 1: EAR deviation
-        if self.user_profile['normal_blink_duration']:
-            normal_ear = np.mean(self.user_profile['normal_blink_duration'])
-            ear_deviation = abs(current_ear - normal_ear) / (normal_ear + 0.1)
-            indicators.append(min(ear_deviation, 1.0))
-        else:
-            indicators.append(max(0, (self.EAR_THRESHOLD - current_ear) / self.EAR_THRESHOLD))
-        
-        # Factor 2: Duration factor
-        indicators.append(min(eyes_closed_duration / self.adaptive_threshold, 1.0))
-        
-        # Factor 3: Time of day factor (optimized lookup)
-        hour = time.localtime().tm_hour
-        sleepy_hours = {1: 0.8, 2: 0.9, 3: 0.95, 4: 0.9, 5: 0.7, 13: 0.6, 14: 0.7, 15: 0.6}
-        indicators.append(sleepy_hours.get(hour, 0.3))
-        
-        # Factor 4: Drowsiness pattern
-        indicators.append(0.8 if self.detect_drowsiness_onset() else 0.2)
-        
-        # Weighted average calculation
-        weights = [0.3, 0.4, 0.15, 0.15]
-        return min(np.average(indicators, weights=weights), 1.0)
-
-    def learn_user_patterns(self, session_outcome='neutral'):
-        """Update user profile - Optimized learning"""
-        # Process normal blinks efficiently
-        normal_blinks = [b['duration'] for b in self.blink_history if b['duration'] < 1.0]
-        if normal_blinks:
-            avg_blink = np.mean(normal_blinks)
-            self.user_profile['normal_blink_duration'].append(avg_blink)
-            # Keep only recent data (memory optimization)
-            if len(self.user_profile['normal_blink_duration']) > 20:
-                self.user_profile['normal_blink_duration'] = self.user_profile['normal_blink_duration'][-20:]
-        
-        # Update stats and threshold
-        if session_outcome == 'false_alarm':
-            self.user_profile['false_alarms'] += 1
-            self._adjust_threshold(True)
-            print("🧠 False alarm - Adjusting threshold up")
-        elif session_outcome == 'successful_wake':
-            self.user_profile['successful_alarms'] += 1
-            self._adjust_threshold(False)
-            print("🧠 Successful wake-up - Adjusting threshold down")
-        
-        self.user_profile['total_sessions'] += 1
-
-    def _adjust_threshold(self, increase):
-        """Adjust threshold with boundary checking"""
-        adjustment = 0.5 * self.learning_rate
-        old_threshold = self.adaptive_threshold
-        
-        if increase:
-            self.adaptive_threshold = min(self.adaptive_threshold + adjustment, self.max_threshold)
-        else:
-            self.adaptive_threshold = max(self.adaptive_threshold - adjustment, self.min_threshold)
-        
-        if self.adaptive_threshold != old_threshold:
-            print(f"🧠 Threshold: {old_threshold:.1f}s → {self.adaptive_threshold:.1f}s")
-        
-        # Update confidence score
-        total_alarms = self.user_profile['false_alarms'] + self.user_profile['successful_alarms']
-        self.confidence_score = self.user_profile['successful_alarms'] / total_alarms if total_alarms > 0 else 0.5
-
-    def intelligent_sleep_analysis(self, ear):
-        """Main sleep analysis with optimized logic"""
-        current_time = time.time()
-        
-        # Add to history efficiently
-        self.ear_history.append({'ear': ear, 'timestamp': current_time, 'alert_level': self.sleep_level})
-        
-        # Calculate eyes closed duration
-        if ear < self.EAR_THRESHOLD:
-            if self.eyes_closed_start is None:
-                self.eyes_closed_start = current_time
-                print(f"👁️ Eyes closed (EAR: {ear:.3f})")
-            eyes_closed_duration = current_time - self.eyes_closed_start
-        else:
-            if self.eyes_closed_start is not None:
-                closed_duration = current_time - self.eyes_closed_start
-                if closed_duration < 1.0:  # Normal blink
-                    self.total_blinks += 1
-                    self.blink_history.append({
-                        'duration': closed_duration, 
-                        'timestamp': current_time, 
-                        'ear_before': ear
-                    })
-                print(f"👁️ Eyes opened (closed {closed_duration:.2f}s)")
-            self.eyes_closed_start = None
-            eyes_closed_duration = 0
-        
-        # Get sleep probability
-        self.sleep_probability = self.predict_sleep_probability(ear, eyes_closed_duration)
-        
-        # Determine alarm trigger - Optimized decision logic
-        should_alarm, alarm_reason = self._should_trigger_alarm(eyes_closed_duration)
-        
-        if should_alarm:
-            self.sleep_level = 1
-            self.last_alarm_reason = alarm_reason
-            if not self.alarm_active:
-                print(f"🚨 ALARM: {alarm_reason}")
-        else:
-            self.sleep_level = 0
-        
-        return eyes_closed_duration
-
-    def _should_trigger_alarm(self, eyes_closed_duration):
-        """Optimized alarm decision logic"""
-        if eyes_closed_duration > self.adaptive_threshold:
-            return True, f"Eyes closed {eyes_closed_duration:.1f}s > threshold {self.adaptive_threshold:.1f}s"
-        
-        if self.detect_drowsiness_onset() and self.sleep_probability > 0.7:
-            return True, f"Early drowsiness (prob {self.sleep_probability:.2f})"
-        
-        if self.sleep_probability > 0.85 and eyes_closed_duration > 2.0:
-            return True, f"High sleep probability {self.sleep_probability:.2f}"
-        
-        return False, ""
-
-    def get_user_feedback(self):
-        """Simplified user feedback"""
-        print("\n" + "="*50)
-        print("🧠 FEEDBACK: (h)elpful | (f)alse alarm | (l)ate | (s)kip")
-        
-        try:
-            feedback = input("Choice: ").lower().strip()
-            feedback_actions = {
-                'h': lambda: self.learn_user_patterns('successful_wake'),
-                'f': lambda: self.learn_user_patterns('false_alarm'),
-                'l': lambda: setattr(self, 'adaptive_threshold', max(self.adaptive_threshold - 0.5, self.min_threshold))
-            }
-            
-            if feedback in feedback_actions:
-                feedback_actions[feedback]()
-                print("✅ Feedback processed!")
-            else:
-                print("⏭️ Feedback skipped.")
-        except Exception:
-            print("⏭️ Input error - feedback skipped.")
-
-    def save_user_profile(self, filename="user_sleep_profile.json"):
-        """Optimized profile saving"""
-        profile_data = {
-            'adaptive_threshold': self.adaptive_threshold,
-            'confidence_score': self.confidence_score,
-            'user_stats': self.user_profile,
-            'last_updated': time.time(),
-            'version': '2.1'
+        .crt-overlay {
+          position: absolute; inset: 0; pointer-events: none; z-index: 90;
+          background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+          background-size: 100% 3px, 3px 100%;
         }
-        
-        try:
-            with open(filename, 'w') as f:
-                json.dump(profile_data, f, indent=2)
-            print(f"💾 Profile saved! Threshold: {self.adaptive_threshold:.1f}s")
-        except Exception as e:
-            print(f"❌ Save failed: {e}")
 
-    def load_user_profile(self, filename="user_sleep_profile.json"):
-        """Optimized profile loading"""
-        try:
-            if not os.path.exists(filename):
-                print("🆕 No profile found. Starting fresh.")
-                return
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0a0a0a; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #166534; }
+      `}} />
+
+      <div className="scanline"></div>
+      <div className="crt-overlay"></div>
+
+      {/* HEADER BAR */}
+      <header className="bg-[#0a0a0a] border-b border-emerald-900/40 p-3 flex items-center justify-between shrink-0 z-50">
+        <div className="flex gap-2">
+          <div className="w-3 h-3 rounded-full bg-red-600/50"></div>
+          <div className="w-3 h-3 rounded-full bg-yellow-600/50"></div>
+          <div className="w-3 h-3 rounded-full bg-emerald-600/50"></div>
+        </div>
+        <div className="text-[11px] font-bold text-emerald-800 tracking-widest uppercase">
+          HVAMSI@REMOTE: ~ (SSH)
+        </div>
+        <div className="hidden md:flex gap-4 text-[10px] text-emerald-900 font-bold">
+          <span>PORT: 8080</span>
+          <span>STATUS: ONLINE</span>
+        </div>
+      </header>
+
+      {/* COMMAND MENU (TABS) */}
+      <nav className="bg-[#080808] border-b border-emerald-900/20 p-2 overflow-x-auto z-50 flex gap-2 no-scrollbar scroll-smooth">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => activeTab !== tab.id && setActiveTab(tab.id)}
+            className={`px-4 py-1.5 text-xs font-bold border transition-all duration-200 rounded-sm whitespace-nowrap ${
+              activeTab === tab.id 
+                ? 'bg-emerald-950/30 text-emerald-400 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.1)]' 
+                : 'text-emerald-900 border-transparent hover:text-emerald-600 hover:bg-emerald-950/10'
+            }`}
+          >
+            {tab.id.toUpperCase()}.SH
+          </button>
+        ))}
+      </nav>
+
+      {/* MAIN CONSOLE AREA */}
+      <main className="flex-1 p-6 md:p-12 overflow-y-auto custom-scrollbar z-40 bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.01)_0%,_transparent_80%)]">
+        <div className="max-w-4xl mx-auto w-full">
             
-            with open(filename, 'r') as f:
-                data = json.load(f)
-            
-            self.adaptive_threshold = data.get('adaptive_threshold', self.default_alarm_threshold)
-            self.confidence_score = data.get('confidence_score', 0.5)
-            
-            # Merge loaded stats
-            loaded_stats = data.get('user_stats', {})
-            for key, value in loaded_stats.items():
-                if key in self.user_profile:
-                    self.user_profile[key] = value
-            
-            sessions = self.user_profile.get('total_sessions', 0)
-            print(f"📂 Profile loaded! Threshold: {self.adaptive_threshold:.1f}s ({sessions} sessions)")
-            
-        except Exception as e:
-            print(f"⚠️ Load error: {e}. Using defaults.")
+            {/* Command Line Input */}
+            <div className="flex items-center gap-2 text-sm md:text-lg mb-8">
+                <TerminalPrompt path={currentTabInfo.path} />
+                <span className="text-white font-bold tracking-tight">{commandTyped}</span>
+                {!isCommandDone && <span className="w-2.5 h-6 bg-emerald-500 animate-pulse"></span>}
+            </div>
 
-    def generate_alarm_sound(self, frequency=1000, duration=0.8, volume=0.8):
-        """Optimized alarm sound generation"""
-        sample_rate = 22050
-        frames = int(duration * sample_rate)
-        t = np.linspace(0, duration, frames)
-        
-        # Generate combined waveform efficiently
-        wave = volume * (np.sin(2 * np.pi * frequency * t) + 
-                        0.5 * np.sin(2 * np.pi * frequency * 1.5 * t))
-        
-        # Convert to stereo
-        stereo_wave = np.column_stack((wave, wave))
-        audio_data = (stereo_wave * 16383).astype(np.int16)
-        
-        return pygame.sndarray.make_sound(audio_data)
+            {/* Structured Content Output */}
+            {isCommandDone && (
+              <div key={renderKey} className="selection:bg-emerald-500/30">
+                <MultiColorTypewriter 
+                  tokens={CONTENT_DATA[activeTab]} 
+                  delay={10} 
+                />
+              </div>
+            )}
+        </div>
+      </main>
 
-    def start_alarm(self):
-        """Thread-safe alarm start"""
-        with self._alarm_lock:
-            if not self.alarm_active and self.sleep_level == 1:
-                self.alarm_active = True
-                print("🚨 ALARM STARTED - WAKE UP! 🚨")
-                self.alarm_thread = threading.Thread(target=self._alarm_loop, daemon=True)
-                self.alarm_thread.start()
+      {/* SYSTEM STATUS FOOTER */}
+      <footer className="bg-[#0a0a0a] border-t border-emerald-900/40 p-2 px-6 text-[11px] flex justify-between text-emerald-900 font-bold z-50 shrink-0">
+        <div className="flex gap-6">
+          <span className="text-emerald-800">UTF-8</span>
+          <span className="hidden sm:inline">TTY: S001</span>
+        </div>
+        <div className="flex gap-5 items-center">
+            <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 
+                CPU_LOAD: 0.04
+            </span>
+            <span className="hidden sm:inline">MEM: 512MB / 4096MB</span>
+            <span className="text-white opacity-40 uppercase tracking-tighter">Terminal V2.5</span>
+        </div>
+      </footer>
+    </div>
+  );
+}
 
-    def stop_alarm(self):
-        """Thread-safe alarm stop"""
-        with self._alarm_lock:
-            if self.alarm_active:
-                self.alarm_active = False
-                if self.alarm_thread and self.alarm_thread.is_alive():
-                    self.alarm_thread.join(timeout=1)
-                print("🔇 Alarm stopped")
-
-    def _alarm_loop(self):
-        """Optimized alarm loop"""
-        while self.alarm_active and self.sleep_level == 1:
-            for i in range(3):
-                if not self.alarm_active:
-                    break
-                frequency = 1000 + (i * 200)
-                sound = self.generate_alarm_sound(frequency, 0.8, 0.8)
-                sound.play()
-                time.sleep(0.3)
-            time.sleep(0.7)
-
-    def draw_status(self, frame, ear, eyes_closed_duration):
-        """Optimized status drawing"""
-        # Status text
-        if self.sleep_level == 1:
-            status_text, color = "⚠️ ALARM ACTIVE - WAKE UP! ⚠️", (0, 0, 255)
-        else:
-            status_text, color = "🧠 ML-MONITORING - ALERT", (0, 255, 0)
-        
-        cv2.putText(frame, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
-        
-        # EAR display
-        ear_color = (0, 0, 255) if ear < self.EAR_THRESHOLD else (0, 255, 0)
-        cv2.putText(frame, f"EAR: {ear:.3f}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, ear_color, 2)
-        
-        # Eyes closed duration with progress bar
-        if eyes_closed_duration > 0:
-            duration_color = (0, 0, 255) if eyes_closed_duration > self.adaptive_threshold * 0.8 else (255, 255, 0)
-            cv2.putText(frame, f"Closed: {eyes_closed_duration:.1f}s / {self.adaptive_threshold:.1f}s", 
-                       (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.7, duration_color, 2)
-            
-            # Progress bar
-            progress = min(eyes_closed_duration / self.adaptive_threshold, 1.0)
-            bar_color = (0, 255, 255) if progress < 0.8 else (0, 0, 255)
-            cv2.rectangle(frame, (10, 130), (310, 150), (100, 100, 100), -1)
-            cv2.rectangle(frame, (10, 130), (10 + int(300 * progress), 150), bar_color, -1)
-            cv2.putText(frame, f"{progress*100:.0f}%", (320, 147), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-        
-        # ML info
-        y = 170
-        prob_color = (0, 255, 0) if self.sleep_probability < 0.5 else (0, 255, 255) if self.sleep_probability < 0.8 else (0, 0, 255)
-        cv2.putText(frame, f"💤 Sleep Prob: {self.sleep_probability:.2f}", (10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, prob_color, 2)
-        cv2.putText(frame, f"🧠 Threshold: {self.adaptive_threshold:.1f}s (Conf: {self.confidence_score:.2f})", (10, y + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
-        
-        # Session info
-        session_duration = (time.time() - self.session_start_time) / 60
-        cv2.putText(frame, f"Session: {session_duration:.1f}min | Blinks: {self.total_blinks}", (10, y + 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-        
-        # Controls
-        cv2.putText(frame, "q=quit | r=reset | s=stop | f=feedback | p=save", (10, 460), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
-
-    def run(self):
-        """Optimized main loop"""
-        cap = cv2.VideoCapture(0)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
-        cap.set(cv2.CAP_PROP_FPS, 30)
-        
-        print("🤖 ML-Enhanced Sleep Detection System v2.1 🤖")
-        print("=" * 50)
-        print(f"🧠 Adaptive threshold: {self.adaptive_threshold:.1f}s")
-        print("Controls: f=feedback | p=save | r=reset | s=stop | q=quit")
-        print("=" * 50)
-        
-        try:
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                
-                frame = cv2.flip(frame, 1)
-                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                results = self.face_mesh.process(rgb_frame)
-                
-                if results.multi_face_landmarks:
-                    landmarks = results.multi_face_landmarks[0].landmark
-                    
-                    # Calculate EAR
-                    left_ear = self.calculate_ear(landmarks, self.LEFT_EYE_LANDMARKS)
-                    right_ear = self.calculate_ear(landmarks, self.RIGHT_EYE_LANDMARKS)
-                    ear = (left_ear + right_ear) / 2
-                    
-                    # Analyze sleep
-                    eyes_closed_duration = self.intelligent_sleep_analysis(ear)
-                    
-                    # Handle alarm
-                    if self.sleep_level == 1:
-                        self.start_alarm()
-                    else:
-                        self.stop_alarm()
-                    
-                    # Draw status
-                    self.draw_status(frame, ear, eyes_closed_duration)
-                    
-                    # Draw eye landmarks
-                    for idx in self.LEFT_EYE_LANDMARKS + self.RIGHT_EYE_LANDMARKS:
-                        x, y = int(landmarks[idx].x * self.cam_width), int(landmarks[idx].y * self.cam_height)
-                        cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
-                else:
-                    cv2.putText(frame, "❌ No Face Detected", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                    self.stop_alarm()
-                
-                cv2.imshow('ML Sleep Detection v2.1', frame)
-                
-                # Handle keyboard input
-                key = cv2.waitKey(1) & 0xFF
-                if key == ord('q'):
-                    break
-                elif key == ord('r'):
-                    self._reset_session()
-                elif key == ord('s'):
-                    self.stop_alarm()
-                elif key == ord('f') and self.last_alarm_reason:
-                    self.get_user_feedback()
-                elif key == ord('p'):
-                    self.save_user_profile()
-        
-        except KeyboardInterrupt:
-            print("\n⚠️ System interrupted")
-        finally:
-            self.stop_alarm()
-            self.save_user_profile()
-            cap.release()
-            cv2.destroyAllWindows()
-            pygame.mixer.quit()
-            print("🔚 System shutdown complete!")
-
-    def _reset_session(self):
-        """Reset session statistics"""
-        self.total_blinks = 0
-        self.session_start_time = time.time()
-        self.blink_history.clear()
-        self.ear_history.clear()
-        print("📊 Session reset!")
-
-
-if __name__ == "__main__":
-    try:
-        system = MLEnhancedSleepDetectionSystem()
-        system.run()
-    except Exception as e:
-        print(f"Error: {e}")
-        import traceback
-        traceback.print_exc()

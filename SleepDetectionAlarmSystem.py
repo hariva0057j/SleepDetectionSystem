@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-
+ 
 // --- DATA ---
 const PROFILE = {
   name: "K. Hari Vamsi",
